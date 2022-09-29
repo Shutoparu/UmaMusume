@@ -1,0 +1,238 @@
+import java.awt.event.*;
+import java.io.File;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Scanner;
+import javax.swing.*;
+
+public class UmaRecorder extends JFrame {
+
+	private static final long serialVersionUID = 1L;
+	final static private int SIZE = 15; // size of uma race (fifteen of them)
+	private JLabel nameInstruction; // label of instruction
+	private ArrayList<JLabel> numRaceList;
+	private ArrayList<JLabel> numFailRaceList;
+	private ArrayList<JLabel> failRateList;
+	private JButton confirmButton; // confirm button
+	private JButton addData; // press before add data, otherwise all frozen
+	private JButton finish;// press to finish input
+	private ArrayList<JCheckBox> checkBoxes; // ArrayList of CheckBox
+	private boolean[] checkStatus; // array that stores which is chosen
+	private String[][] umaStats; // 2D array that stores uma status
+	private static File f;
+	private static Scanner scnr;
+
+	public UmaRecorder() {
+
+		// initialize stuff
+		checkStatus = new boolean[SIZE];
+		checkBoxes = new ArrayList<JCheckBox>();
+		numRaceList = new ArrayList<JLabel>();
+		numFailRaceList = new ArrayList<JLabel>();
+		failRateList = new ArrayList<JLabel>();
+		umaStats = new String[SIZE + 2][];
+
+		// move data from scnr to umaStats
+		for (int i = 0; i < SIZE + 2; i++) {
+			umaStats[i] = scnr.nextLine().split(" ");
+		}
+
+		// set the title of program
+		super.setTitle("Umamusume");
+		super.setLayout(null);
+
+		// create total wins
+
+		// generate a label of instruction
+		nameInstruction = new JLabel("請選擇不滿意成績者：(目前總比賽數：" + Integer.parseInt(umaStats[0][1]) + ")");
+		nameInstruction.setBounds(5, 5, 300, 20);
+		super.add(nameInstruction);
+
+		// generate instruction labels
+		String[] instruction = umaStats[1];
+
+		// set checkbox and name
+		JLabel nameTag = new JLabel(instruction[0]);
+		nameTag.setBounds(5, 25, 150, 20);
+		super.add(nameTag);
+
+		// set numRace
+		JLabel numRaceTag = new JLabel(instruction[1]);
+		numRaceTag.setBounds(175, 25, 50, 20);
+		super.add(numRaceTag);
+
+		// set numFailRace
+		JLabel numFailRaceTag = new JLabel(instruction[2]);
+		numFailRaceTag.setBounds(225, 25, 50, 20);
+		super.add(numFailRaceTag);
+
+		// set failRate
+		JLabel failRateTag = new JLabel(instruction[3]);
+		failRateTag.setBounds(275, 25, 50, 20);
+		super.add(failRateTag);
+
+		// generate fifteen check boxes of fifteen umamusume and such scanner stuff
+		for (int i = 0; i < SIZE; i++) {
+			String[] umaStat = umaStats[i + 2]; // name, numRace, numFailRace, failRate
+
+			// set checkbox and name
+			JCheckBox checkbox = new JCheckBox(umaStat[0]);
+			checkbox.setBounds(5, 45 + 20 * i, 150, 20);
+			checkbox.setEnabled(false);
+			super.add(checkbox);
+			checkBoxes.add(checkbox);
+
+			// set numRace
+			JLabel numRace = new JLabel(umaStat[1]);
+			numRace.setBounds(175, 45 + 20 * i, 50, 20);
+			super.add(numRace);
+			numRaceList.add(numRace);
+
+			// set numFailRace
+			JLabel numFailRace = new JLabel(umaStat[2]);
+			numFailRace.setBounds(225, 45 + 20 * i, 50, 20);
+			super.add(numFailRace);
+			numFailRaceList.add(numFailRace);
+
+			// set failRate
+			JLabel failRate = new JLabel(umaStat[3]);
+			failRate.setBounds(275, 45 + 20 * i, 75, 20);
+			super.add(failRate);
+			failRateList.add(failRate);
+		}
+
+		// generate confirm button
+		createConfirmButton();
+
+		// generate addData button
+		createAddDataButton();
+
+		// generate finish button
+		createFinishButton();
+
+		// set the frame of program
+		super.setSize(400, 400);
+		super.setVisible(true);
+		super.setDefaultCloseOperation(EXIT_ON_CLOSE);
+	}
+
+	private void newGame() {
+		umaStats[0][1] = String.valueOf(Integer.parseInt(umaStats[0][1]) + 1);
+		for (int i = 0; i < SIZE; i++) {
+			umaStats[i + 2][1] = String.valueOf(Integer.parseInt(umaStats[i + 2][1]) + 1);
+			if (checkStatus[i]) {
+				umaStats[i + 2][2] = String.valueOf(Integer.parseInt(umaStats[i + 2][2]) + 1);
+			}
+			umaStats[i + 2][3] = calculateFailRate(umaStats[i + 2][1], umaStats[i + 2][2]);
+			checkStatus[i] = false;
+		}
+	}
+
+	private String calculateFailRate(String races, String lozes) {
+		float intRace = Float.parseFloat(races);
+		float intLozes = Float.parseFloat(lozes);
+		float loseRate = (intLozes / intRace) * 100;
+		return String.format("%.2f", loseRate) + "%";
+	}
+
+	private void printFile(File f) {
+		PrintWriter pwtr = null;
+		try {
+			pwtr = new PrintWriter(f);
+		} catch (Exception e) {
+
+		}
+		for (int i = 0; i < umaStats.length; i++) {
+			for (int j = 0; j < umaStats[i].length; j++) {
+				pwtr.print(umaStats[i][j] + " ");
+			}
+			pwtr.println();
+		}
+		pwtr.close();
+	}
+
+	private void createConfirmButton() {
+
+		// generate the confirm button
+		confirmButton = new JButton("確認");
+		confirmButton.setBounds(5, 345, 100, 20);
+		confirmButton.setEnabled(false);
+		super.add(confirmButton);
+
+		// define the action of confirm button:
+		// button and check boxes locked up, write status into checkStat array, finish
+		// the program
+		confirmButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				confirmButton.setEnabled(false);
+				addData.setEnabled(true);
+				finish.setEnabled(true);
+				for (int i = 0; i < checkBoxes.size(); i++) {
+					checkBoxes.get(i).setEnabled(false);
+					checkStatus[i] = checkBoxes.get(i).isSelected();
+					checkBoxes.get(i).setSelected(false);
+				}
+				newGame();
+				nameInstruction.setText("請選擇不滿意成績者：(目前總比賽數：" + Integer.parseInt(umaStats[0][1]) + ")");
+				for (int i = 0; i < checkBoxes.size(); i++) {
+					numRaceList.get(i).setText(umaStats[i + 2][1]);
+					numFailRaceList.get(i).setText(umaStats[i + 2][2]);
+					failRateList.get(i).setText(umaStats[i + 2][3]);
+				}
+			}
+		});
+	}
+
+	private void createAddDataButton() {
+
+		// generate addData button
+		addData = new JButton("加入新資料");
+		addData.setBounds(105, 345, 100, 20);
+		super.add(addData);
+
+		// define the action of addData button
+		addData.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				addData.setEnabled(false);
+				confirmButton.setEnabled(true);
+				finish.setEnabled(false);
+				for (int i = 0; i < checkBoxes.size(); i++) {
+					checkBoxes.get(i).setEnabled(true);
+				}
+			}
+		});
+	}
+
+	private void createFinishButton() {
+
+		// generate finish button
+		finish = new JButton("結束");
+		finish.setBounds(205, 345, 100, 20);
+		super.add(finish);
+
+		// define the action of finish button
+		finish.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				finish.setEnabled(false);
+				addData.setEnabled(false);
+				printFile(f);
+				dispose();
+			}
+		});
+	}
+
+	public static void main(String[] args) {
+	  if
+    f = new File("/Users/kinoko/Desktop/umamusume/UmaData.txt");
+    try {
+      scnr = new Scanner(f);
+    } catch (Exception e) {
+      System.out.println("Failed to open");
+    }
+    new UmaRecorder();
+  }
+
+}
